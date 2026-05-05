@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+option java_package = "org.mina.topologia.grpc";
+option java_outer_classname = "TopologiaProto";
+
+service TopologiaService {
+    rpc GetSemaforos (EmptyRequest) returns (SemaforoListResponse);
+}
+
+message EmptyRequest {}
+
+message Semaforo {
+    string id = 1;
+    double latitud = 2;
+    double longitud = 3;
+    string sentido = 4;
+}
+
+message SemaforoListResponse {
+    repeated Semaforo semaforos = 1;
+}

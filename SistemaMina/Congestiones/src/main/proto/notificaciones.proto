@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option java_package = "org.mina.notificaciones.grpc";
+option java_outer_classname = "NotificacionesProto";
+
+service NotificacionesService {
+    rpc EnviarAlerta (AlertaRequest) returns (AlertaResponse);
+}
+
+message AlertaRequest {
+    string mensaje = 1;
+    string nivel_severidad = 2;
+    string id_semaforo = 3;  
+}
+
+message AlertaResponse {
+    string estado = 1;
+    string timestamp = 2;
+}
