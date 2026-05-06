@@ -56,7 +56,7 @@ public class EstacionCentral {
         channel.basicConsume(QUEUE_SEMAFOROS, true, estadosCallback, consumerTag -> {
         });
 
-        channel.queueDeclare(QUEUE_VEHICULOS, false, false, true, null);
+        channel.queueDeclare(QUEUE_VEHICULOS, true, false, false, null);
         channel.queueBind(QUEUE_VEHICULOS, EXCHANGE_MQTT, ROUTING_KEY_VEHICULOS);
         DeliverCallback vehiculosCallback = (consumerTag, delivery) -> {
             String mensaje = new String(delivery.getBody(), "UTF-8");

@@ -63,6 +63,11 @@ public class Congestiones {
     public CompletionStage<Void> recibirGpsVehiculo(Message<byte[]> mensaje) {
         try {
             String mensajeGps = new String(mensaje.getPayload(), StandardCharsets.UTF_8);
+            if (!mensajeGps.trim().startsWith("{")) {
+                System.out.println(" [!] Mensaje ignorado en vehiculos-in por no ser JSON de vehiculo: " + mensajeGps);
+                return mensaje.ack();
+            }
+
             JsonNode nodo = mapper.readTree(mensajeGps);
             String idVehiculo = nodo.path("id").asText("");
 
