@@ -13,6 +13,7 @@
         <module>SemaforosTopologia</module>
         <module>Notificaciones</module>
         <module>Almacenamiento</module>
+        <module>Gerencia</module>
     </modules>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

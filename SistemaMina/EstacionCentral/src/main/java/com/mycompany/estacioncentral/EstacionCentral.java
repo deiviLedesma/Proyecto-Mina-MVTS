@@ -6,6 +6,8 @@ import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
 import com.rabbitmq.client.DeliverCallback;
+import com.rabbitmq.client.MessageProperties;
+import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -28,41 +30,13 @@ public class EstacionCentral {
         Connection connection = factory.newConnection();
         Channel channel = connection.createChannel();
 
-        // ==========================================================
-        // 2. ESCUCHAR CAMBIOS DE TOPOLOGÍA (Pub/Sub)
-        // ==========================================================
-        channel.queueDeclare(QUEUE_SEMAFOROS, true, false, false, null);
-        channel.queueBind(QUEUE_SEMAFOROS, EXCHANGE_MQTT, "semaforos.#.estado");
-
-        DeliverCallback cambiosCallback = (consumerTag, delivery) -> {
-            String cambioJson = new String(delivery.getBody(), "UTF-8");
-            System.out.println(" [¡ALERTA!] Topología actualizada en la mina: " + cambioJson);
-            // actualizar mapa interno de la Estación
-        };
-        channel.basicConsume(QUEUE_SEMAFOROS, true, cambiosCallback, consumerTag -> { });
-
-        // ==========================================================
-        // 3. vehículos
-        // ==========================================================
-        channel.queueDeclare(QUEUE_VEHICULOS, false, false, true, null);
-        channel.queueBind(QUEUE_VEHICULOS, EXCHANGE_MQTT, "mineria.vehiculos.#");
-
-        DeliverCallback vehiculosCallback = (consumerTag, delivery) -> {
-            String mensaje = new String(delivery.getBody(), "UTF-8");
-            System.out.println(" [GPS] Vehículo: " + mensaje);
-        };
-        // autoAck: true
-        channel.basicConsume(QUEUE_VEHICULOS, true, vehiculosCallback, consumerTag -> { });
         
         // ==========================================================
-        // 4. Notificaciones
+        // Notificaciones
         // ==========================================================
         channel.exchangeDeclare(EXCHANGE_MINA, BuiltinExchangeType.TOPIC, true);
-
         channel.queueDeclare(QUEUE_ALERTAS, true, false, false, null);
-
-        channel.queueBind(QUEUE_ALERTAS, EXCHANGE_MINA, "central.notificaciones.alertas");
-
+        channel.queueBind(QUEUE_ALERTAS, EXCHANGE_MINA, "#");
         DeliverCallback alertasCallback = (consumerTag, delivery) -> {
             try {
                 String alertaJson = new String(delivery.getBody(), "UTF-8");
@@ -76,13 +50,38 @@ public class EstacionCentral {
                 channel.basicReject(delivery.getEnvelope().getDeliveryTag(), true);
             }
         };
-
         System.out.println(" [*] Escuchando Alertas de Notificaciones en el nuevo Exchange...");
         channel.basicConsume(QUEUE_ALERTAS, false, alertasCallback, consumerTag -> {
         });
         
         // ==========================================================
-        // 5. Cambios de posiciones de semaforos
+        // ESCUCHAR CAMBIOS DE TOPOLOGÍA (Pub/Sub)
+        // ==========================================================
+        channel.queueDeclare(QUEUE_SEMAFOROS, true, false, false, null);
+        channel.queueBind(QUEUE_SEMAFOROS, EXCHANGE_MQTT, "semaforos.#.estado");
+
+        DeliverCallback cambiosCallback = (consumerTag, delivery) -> {
+            String cambioJson = new String(delivery.getBody(), "UTF-8");
+            System.out.println(" [¡ALERTA!] Topología actualizada en la mina: " + cambioJson);
+            // actualizar mapa interno de la Estación
+        };
+        channel.basicConsume(QUEUE_SEMAFOROS, true, cambiosCallback, consumerTag -> { });
+
+        // ==========================================================
+        // vehículos
+        // ==========================================================
+        channel.queueDeclare(QUEUE_VEHICULOS, false, false, true, null);
+        channel.queueBind(QUEUE_VEHICULOS, EXCHANGE_MQTT, "mineria.vehiculos.#");
+
+        DeliverCallback vehiculosCallback = (consumerTag, delivery) -> {
+            String mensaje = new String(delivery.getBody(), "UTF-8");
+            System.out.println(" [GPS] Vehículo: " + mensaje);
+        };
+        // autoAck: true
+        channel.basicConsume(QUEUE_VEHICULOS, true, vehiculosCallback, consumerTag -> { });
+        
+        // ==========================================================
+        // Cambios de posiciones de semaforos
         // ==========================================================
         channel.queueDeclare(QUEUE_TOPOLOGIA, true, false, false, null);
 
@@ -113,12 +112,16 @@ public class EstacionCentral {
         });
 
         // ==========================================================
-        // 1. INICIALIZACIÓN: PEDIR TOPOLOGÍA POR RPC A QUARKUS
+        // INICIALIZACIÓN: PEDIR TOPOLOGÍA POR RPC A QUARKUS
         // ==========================================================
         System.out.println(" [*] Solicitando topología de semáforos por RPC...");
         String topologiaJson = pedirTopologiaRpc(channel);
         System.out.println(" [✓] Topología recibida: " + topologiaJson);
         System.out.println(" [*] Estación Central 100% operativa.");
+        
+        // Cambiar color semaforo
+        Thread.sleep(5000);
+        cambiarSemaforo(channel, "01", "CAMBIAR_A_VERDE");
     }
 
     // RPC de RabbitMQ en Java Clásico
@@ -145,5 +148,22 @@ public class EstacionCentral {
         String result = response.get();
         channel.basicCancel(cTag);
         return result;
+    }
+    
+    // Método reutilizable para enviar órdenes
+    public static void cambiarSemaforo(Channel channel, String idSemaforo, String orden) {
+        try {
+            // Nota el punto '.' en lugar de '/' para la Routing Key en AMQP
+            String routingKey = "semaforos." + idSemaforo + ".comandos";
+            
+            // PERSISTENT_TEXT_PLAIN asegura que el mensaje se guarde si el semáforo está desconectado
+            channel.basicPublish(EXCHANGE_MQTT, routingKey, 
+                    MessageProperties.PERSISTENT_TEXT_PLAIN, 
+                    orden.getBytes("UTF-8"));
+                    
+            System.out.println(" [->] Orden enviada al Semáforo " + idSemaforo + ": " + orden);
+        } catch (IOException e) {
+            System.err.println("Error al enviar orden al semáforo.");
+        }
     }
 }

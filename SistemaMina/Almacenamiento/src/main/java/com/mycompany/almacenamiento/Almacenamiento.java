@@ -1,6 +1,7 @@
 package com.mycompany.almacenamiento;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import java.nio.charset.StandardCharsets;
 import org.eclipse.microprofile.reactive.messaging.Incoming;
 import org.eclipse.microprofile.reactive.messaging.Message;
 
@@ -25,12 +26,21 @@ public class Almacenamiento {
     }
 
     @Incoming("productos-in")
-    public CompletionStage<Void> procesarProducto(Message<String> mensaje) {
-        String payloadCrudo = mensaje.getPayload();
-        
+    public CompletionStage<Void> procesarProducto(Message<byte[]> mensaje) {
+        byte[] payloadBytes = mensaje.getPayload();
+        String payloadCrudo = new String(payloadBytes, StandardCharsets.UTF_8);
+
         historialProductos.add(payloadCrudo);
         System.out.println("[Producto - Raw]: " + payloadCrudo);
 
         return mensaje.ack();
+    }
+    
+    public List<String> getHistorialCongestiones() {
+        return historialCongestiones;
+    }
+
+    public List<String> getHistorialProductos() {
+        return historialProductos;
     }
 }

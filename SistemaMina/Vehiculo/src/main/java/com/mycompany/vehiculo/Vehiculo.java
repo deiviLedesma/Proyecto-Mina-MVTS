@@ -23,27 +23,34 @@ public class Vehiculo {
             publisher.connect(options);
             System.out.println("Vehículo " + idVehiculo + " conectado a RabbitMQ.");
 
-            // 3. Bucle infinito
+            // Bucle infinito
             while (true) {
                 // Simulación de coordenadas
                 double latSimulada = 27.48 + (Math.random() * 0.005);
                 double lonSimulada = -109.93 + (Math.random() * 0.005);
 
-                // Armamos el JSON
+                // Armamar el JSON
                 String payload = String.format("{\"lat\": %.4f, \"lon\": %.4f, \"id\": \"%s\"}", 
                                                 latSimulada, lonSimulada, idVehiculo);
 
-                MqttMessage msg = new MqttMessage(payload.getBytes());
-                msg.setQos(0); // dispara y olvida
-
                 if (publisher.isConnected()) {
-                    publisher.publish("mineria/vehiculos/posicion", msg);
-                    System.out.println("Posición enviada: " + payload);
+                    // 1. Mensaje de Telemetría (Tiempo real - QoS 0)
+                    MqttMessage msgPosicion = new MqttMessage(payload.getBytes());
+                    msgPosicion.setQos(0); 
+                    publisher.publish("mineria/vehiculos/posicion", msgPosicion);
+                    
+                    // 2. Mensaje de Persistencia (Garantía de entrega - QoS 1)
+                    MqttMessage msgPersistencia = new MqttMessage("hierro cargamento".getBytes());
+                    msgPersistencia.setQos(1); // QoS 1 asegura "al menos una vez"
+                    
+                    String topicPersistencia = "mina/vehiculos/descarga/" + idVehiculo;
+                    publisher.publish(topicPersistencia, msgPersistencia);
+
+                    System.out.println("Enviado -> Posición: " + payload + " | Persistencia: " + topicPersistencia);
                 } else {
                     System.out.println("Sin señal... posición perdida.");
                 }
 
-                // Delay de 3 segundos
                 Thread.sleep(3000);
             }
 

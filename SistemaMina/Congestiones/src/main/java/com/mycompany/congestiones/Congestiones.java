@@ -95,6 +95,7 @@ public class Congestiones {
         System.out.println(" [GPS Congestiones] Vehículo en movimiento: " + mensajeGps);
         if (mensajeGps.contains("1")) {
             enviarAlertaAsincrona("Congestion", "Alta", "1");
+            reportarCongestion("congestiona a guardar");
         }
         
         // Lista de Posiciones
@@ -126,7 +127,6 @@ public class Congestiones {
     // puente con el application.properties
     @Channel("congestiones-out")
     Emitter<String> emisor;
-
     public void reportarCongestion(String datosCongestion) {
 
         // Enviamos el mensaje en texto plano
