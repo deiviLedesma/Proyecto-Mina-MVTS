@@ -8,17 +8,15 @@ import org.mina.topologia.grpc.TopologiaServiceGrpc;
 @GrpcService
 public class TopologiaGrpcServer extends TopologiaServiceGrpc.TopologiaServiceImplBase {
 
-    // Inyectamos el gestor para poder leer la lista de semáforos
     @Inject
     GestorTopologia gestor;
 
     @Override
-    public void getSemaforos(TopologiaProto.EmptyRequest request, 
-                             io.grpc.stub.StreamObserver<TopologiaProto.SemaforoListResponse> responseObserver) {
-        
+    public void getSemaforos(TopologiaProto.EmptyRequest request,
+            io.grpc.stub.StreamObserver<TopologiaProto.SemaforoListResponse> responseObserver) {
+
         TopologiaProto.SemaforoListResponse.Builder responseBuilder = TopologiaProto.SemaforoListResponse.newBuilder();
-        
-        // Llamamos al nuevo método público del gestor
+
         for (GestorTopologia.SemaforoDto dto : gestor.obtenerTodosLosSemaforos()) {
             responseBuilder.addSemaforos(TopologiaProto.Semaforo.newBuilder()
                     .setId(dto.id)
@@ -30,8 +28,7 @@ public class TopologiaGrpcServer extends TopologiaServiceGrpc.TopologiaServiceIm
 
         responseObserver.onNext(responseBuilder.build());
         responseObserver.onCompleted();
-        
-        System.out.println(" [gRPC] Petición resuelta exitosamente.");
-        gestor.actualizarSemaforo("01", 2, 2, "SUR");
+
+        System.out.println(" [gRPC] Peticion resuelta exitosamente.");
     }
 }
