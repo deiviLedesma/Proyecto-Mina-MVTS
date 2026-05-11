@@ -9,27 +9,18 @@ import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.enterprise.event.Observes;
 import jakarta.inject.Inject;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 
 @ApplicationScoped
 public class GestorTopologia {
 
-    private final Map<String, SemaforoDto> dbSemaforos = new HashMap<>();
-
     @Inject
     ObjectMapper mapper;
 
+    @Inject
+    SemaforoService service;
+
     void onStart(@Observes StartupEvent ev) {
-        dbSemaforos.put("01", new SemaforoDto("01", 27.481, -109.931, "NORTE"));
-        dbSemaforos.put("02", new SemaforoDto("02", 27.482, -109.932, "ESTE"));
-
         iniciarServidorRpcRabbitMQ();
-    }
-
-    public Collection<SemaforoDto> obtenerTodosLosSemaforos() {
-        return dbSemaforos.values();
     }
 
     private void iniciarServidorRpcRabbitMQ() {
@@ -51,7 +42,7 @@ public class GestorTopologia {
                         .correlationId(delivery.getProperties().getCorrelationId())
                         .build();
 
-                String respuestaJson = mapper.writeValueAsString(dbSemaforos.values());
+                String respuestaJson = mapper.writeValueAsString(service.listarSemaforos());
 
                 channel.basicPublish("",
                         delivery.getProperties().getReplyTo(),
@@ -65,21 +56,6 @@ public class GestorTopologia {
             });
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-
-    public static class SemaforoDto {
-
-        public String id;
-        public double lat;
-        public double lon;
-        public String sentido;
-
-        public SemaforoDto(String id, double lat, double lon, String sentido) {
-            this.id = id;
-            this.lat = lat;
-            this.lon = lon;
-            this.sentido = sentido;
         }
     }
 }

@@ -2,6 +2,7 @@ package com.mycompany.semaforostopologia;
 
 import io.quarkus.grpc.GrpcService;
 import jakarta.inject.Inject;
+import io.smallrye.common.annotation.Blocking;
 import org.mina.topologia.grpc.TopologiaProto;
 import org.mina.topologia.grpc.TopologiaServiceGrpc;
 
@@ -9,19 +10,20 @@ import org.mina.topologia.grpc.TopologiaServiceGrpc;
 public class TopologiaGrpcServer extends TopologiaServiceGrpc.TopologiaServiceImplBase {
 
     @Inject
-    GestorTopologia gestor;
+    SemaforoService service;
 
     @Override
+    @Blocking
     public void getSemaforos(TopologiaProto.EmptyRequest request,
             io.grpc.stub.StreamObserver<TopologiaProto.SemaforoListResponse> responseObserver) {
 
         TopologiaProto.SemaforoListResponse.Builder responseBuilder = TopologiaProto.SemaforoListResponse.newBuilder();
 
-        for (GestorTopologia.SemaforoDto dto : gestor.obtenerTodosLosSemaforos()) {
+        for (SemaforoDto dto : service.listarSemaforos()) {
             responseBuilder.addSemaforos(TopologiaProto.Semaforo.newBuilder()
                     .setId(dto.id)
-                    .setLatitud(dto.lat)
-                    .setLongitud(dto.lon)
+                    .setLatitud(dto.latitud)
+                    .setLongitud(dto.longitud)
                     .setSentido(dto.sentido)
                     .build());
         }
