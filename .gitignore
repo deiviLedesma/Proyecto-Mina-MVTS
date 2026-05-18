@@ -1,3 +1,2 @@
-/simulador-vehiculo/target/
-/SistemaMina/Almacenamiento/target/
-/SistemaMina/Gerencia/target/
+**/target/
+**/build/
